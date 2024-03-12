@@ -1,40 +1,42 @@
 ﻿Imports System.IO.Ports
+Imports System.Threading
+Imports System.Windows.Forms.VisualStyles.VisualStyleElement
 
 Public Class Form1
-    Dim SerialPort1 = New SerialPort()
+
+
+    Dim mySerialPort As New SerialPort("COM2", 9600, Parity.None, 8, StopBits.One)
+
+
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Connetc_Serial_Port()
-
-    End Sub
-
-    Private Sub Connetc_Serial_Port()
         Try
-            ' Create a new SerialPort object with default settings.
-
-            With SerialPort1
-                .PortName = "COM2" 'COMPORT
-                .BaudRate = 9600
-                .Parity = Parity.None
-                .DataBits = 8
-                .StopBits = 1 'IO.Ports.StopBits.One
-
-                If .IsOpen = True Then .Close()
-            End With
-            SerialPort1.Open()
-
+            mySerialPort.Open()
+            AddHandler mySerialPort.DataReceived, AddressOf data
         Catch ex As Exception
-            MsgBox(" <<<PORT >>>  ไม่พบหรือกำลังเปิดอยู่ กรุณาปิดโปรแกรมอื่นๆก่อนแล้วเปิดโปรแกรมนี้ใหม่อีกครั้ง", MsgBoxStyle.Information)
-            Application.Exit()
+            MessageBox.Show("Error opening serial port: " & ex.Message)
         End Try
 
     End Sub
+    Private Sub data(sender As Object, e As SerialDataReceivedEventArgs)
+        Dim receivedData As String = mySerialPort.ReadLine()
+        Console.WriteLine(receivedData)
+        SetText(receivedData)
 
 
+    End Sub
 
+    Delegate Sub SetTextCallback(ByVal text As String)
 
-    Private Sub Timer1_Tick(sender As Object, e As EventArgs) Handles Timer1.Tick
-        Dim message As String = SerialPort1.ReadLine()
-        Label1.Text = message
-        Console.WriteLine(message)
+    Private Sub SetText(ByVal text As String)
+        If Me.Label1.InvokeRequired Then
+            Dim d As SetTextCallback = New SetTextCallback(AddressOf SetText)
+            Me.Invoke(d, New Object() {text})
+        Else
+            Me.Label1.Text = text
+        End If
+    End Sub
+
+    Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        mySerialPort.Close()
     End Sub
 End Class
